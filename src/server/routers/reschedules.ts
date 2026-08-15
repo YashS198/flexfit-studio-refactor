@@ -16,25 +16,6 @@ import { router, protectedProcedure } from "../trpc";
  */
 export const FREE_RESCHEDULE_HOURS = 4;
 
-async function activeMembershipFor(
-  db: typeof import("@/db").db,
-  userId: number,
-) {
-  const today = new Date().toISOString().slice(0, 10);
-  return db
-    .select()
-    .from(memberships)
-    .where(
-      and(
-        eq(memberships.userId, userId),
-        eq(memberships.status, "active"),
-        sql`${memberships.endDate} >= ${today}`,
-      ),
-    )
-    .orderBy(desc(memberships.endDate))
-    .get();
-}
-
 export const reschedulesRouter = router({
   reschedule: protectedProcedure
     .input(
