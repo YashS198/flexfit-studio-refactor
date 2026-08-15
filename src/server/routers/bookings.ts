@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { UNLIMITED_CREDITS } from "@/domain/bookings/constants";
+import { promoteNextWaitlisted } from "@/domain/bookings/waitlist";
 import { TRPCError } from "@trpc/server";
 import { hoursUntil } from "@/lib/time";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
@@ -10,9 +12,6 @@ import { router, protectedProcedure, staffProcedure } from "../trpc";
  * starts. Cancelling later still frees the spot but forfeits the credit.
  */
 export const FREE_CANCELLATION_HOURS = 12;
-
-/** Plans with this many credits are treated as unlimited and never decrement. */
-export const UNLIMITED_CREDITS = 999;
 
 async function activeMembershipFor(
   db: typeof import("@/db").db,
@@ -205,47 +204,9 @@ export const bookingsRouter = router({
             .where(eq(memberships.id, ms.id));
         }
       }
-
       // Freeing a confirmed spot promotes the member who has waited longest.
       if (row.booking.status === "booked") {
-        const next = await ctx.db
-          .select()
-          .from(bookings)
-          .where(
-            and(
-              eq(bookings.classId, row.cls.id),
-              eq(bookings.status, "waitlisted"),
-            ),
-          )
-          .orderBy(asc(bookings.bookedAt))
-          .get();
-
-        if (next) {
-          await ctx.db
-            .update(bookings)
-            .set({ status: "booked", creditsUsed: row.cls.creditCost })
-            .where(eq(bookings.id, next.id));
-
-          if (next.membershipId) {
-            const ms = await ctx.db
-              .select()
-              .from(memberships)
-              .where(eq(memberships.id, next.membershipId))
-              .get();
-
-            if (ms && ms.creditsRemaining < UNLIMITED_CREDITS) {
-              await ctx.db
-                .update(memberships)
-                .set({
-                  creditsRemaining: Math.max(
-                    0,
-                    ms.creditsRemaining - row.cls.creditCost,
-                  ),
-                })
-                .where(eq(memberships.id, ms.id));
-            }
-          }
-        }
+        await promoteNextWaitlisted(ctx.db, row.cls.id, row.cls.creditCost);
       }
 
       return { ok: true, refunded: refundable };
