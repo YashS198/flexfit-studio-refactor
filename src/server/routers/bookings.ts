@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { hoursUntil } from "@/lib/time";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { bookings, classes, memberships, checkins, users } from "@/db/schema";
 import { router, protectedProcedure, staffProcedure } from "../trpc";
@@ -12,10 +13,6 @@ export const FREE_CANCELLATION_HOURS = 12;
 
 /** Plans with this many credits are treated as unlimited and never decrement. */
 export const UNLIMITED_CREDITS = 999;
-
-function hoursUntil(iso: string, now = new Date()): number {
-  return (new Date(iso).getTime() - now.getTime()) / 36e5;
-}
 
 async function activeMembershipFor(
   db: typeof import("@/db").db,

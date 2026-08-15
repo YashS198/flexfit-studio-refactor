@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { hoursUntil } from "@/lib/time";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   corporateBookings,
@@ -16,10 +17,6 @@ import { router, protectedProcedure, staffProcedure } from "../trpc";
  * the class starts. Cancelling later still frees the spot but forfeits the credit.
  */
 export const CORPORATE_FREE_CANCELLATION_HOURS = 24;
-
-function hoursUntil(iso: string, now = new Date()): number {
-  return (new Date(iso).getTime() - now.getTime()) / 36e5;
-}
 
 async function getCompanyForMember(
   db: typeof import("@/db").db,

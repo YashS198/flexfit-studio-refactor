@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hoursUntil } from "@/lib/time";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import {
@@ -14,10 +15,6 @@ import { router, protectedProcedure } from "../trpc";
  * original class starts. This is more generous than cancellation policy.
  */
 export const FREE_RESCHEDULE_HOURS = 4;
-
-function hoursUntil(iso: string, now = new Date()): number {
-  return (new Date(iso).getTime() - now.getTime()) / 36e5;
-}
 
 async function activeMembershipFor(
   db: typeof import("@/db").db,
